@@ -4,9 +4,7 @@ import os
 import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from io import BytesIO
 import urllib.request
-import PyPDF2
 
 # -----------------------------
 # CONFIGURATION
@@ -23,26 +21,6 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
-
-# -----------------------------
-# PDF EXTRACTION HELPER
-# -----------------------------
-def extract_text_from_pdf(pdf_bytes):
-    """
-    Extract text from a PDF file using PyPDF2
-    """
-    try:
-        pdf_reader = PyPDF2.PdfReader(BytesIO(pdf_bytes))
-        text = ""
-        for page in pdf_reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-        if not text.strip():
-            raise ValueError("No text could be extracted from the PDF.")
-        return text
-    except Exception as e:
-        raise ValueError(f"Failed to extract text from PDF: {str(e)}")
 
 # -----------------------------
 # HELPER FUNCTIONS
@@ -70,7 +48,6 @@ def call_openrouter(messages):
             try:
                 return json.loads(content)
             except json.JSONDecodeError:
-                # Fallback: wrap plain content
                 return {"summary": content, "questions": ["Could not parse questions."]}
     except Exception as e:
         logger.error(f"OpenRouter API error: {str(e)}")
@@ -112,27 +89,6 @@ def grade_answer(chapter_text, student_answer):
     ]
     return call_openrouter(messages)
 
-def get_text_from_upload(file_storage):
-    """
-    Read the uploaded file and return its text content.
-    If it's a PDF (based on filename), extract text.
-    Otherwise, decode as UTF-8 text.
-    """
-    filename = file_storage.filename or ""
-    file_bytes = file_storage.read()
-
-    # Check if it's a PDF
-    is_pdf = filename.lower().endswith('.pdf')
-
-    if is_pdf:
-        return extract_text_from_pdf(file_bytes)
-    else:
-        # Assume plain text
-        try:
-            return file_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            raise ValueError("Uploaded file is not a valid UTF-8 text file and not a PDF.")
-
 # -----------------------------
 # ROUTES
 # -----------------------------
@@ -143,8 +99,8 @@ def home():
         "status": "online",
         "message": "SmartStudy API is running",
         "endpoints": {
-            "/analyze": "POST - Upload document to detect chapters",
-            "/summarize": "POST - Upload chapter to get summary and questions",
+            "/analyze": "POST - Send text to detect chapters",
+            "/summarize": "POST - Send text to get summary and questions",
             "/grade": "POST - Grade student answer",
             "/health": "GET - Health check"
         }
@@ -156,37 +112,35 @@ def health():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """Upload document to detect chapters"""
+    """Receive raw text and detect chapters."""
     try:
-        if 'file' not in request.files:
-            return jsonify({"error": "No file provided"}), 400
-        
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
 
-        text = get_text_from_upload(file)
+        text = data.get('text', '').strip()
+        if not text:
+            return jsonify({"error": "Missing 'text' field"}), 400
+
         result = detect_chapters(text)
         return jsonify(result), 200
 
-    except ImportError as ie:
-        return jsonify({"error": str(ie)}), 500
     except Exception as e:
         logger.error(f"Error in /analyze: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/summarize', methods=['POST'])
 def summarize():
-    """Upload chapter to get summary and questions"""
+    """Receive raw text and return summary and practice questions."""
     try:
-        if 'file' not in request.files:
-            return jsonify({"error": "No file provided"}), 400
-        
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
 
-        text = get_text_from_upload(file)
+        text = data.get('text', '').strip()
+        if not text:
+            return jsonify({"error": "Missing 'text' field"}), 400
+
         result = summarize_chapter(text)
         return jsonify(result), 200
 
@@ -196,17 +150,17 @@ def summarize():
 
 @app.route('/grade', methods=['POST'])
 def grade():
-    """Grade student's answer"""
+    """Grade student's answer."""
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
-        
-        chapter_text = data.get('chapter_text')
-        answer = data.get('answer')
-        
+
+        chapter_text = data.get('chapter_text', '').strip()
+        answer = data.get('answer', '').strip()
+
         if not chapter_text or not answer:
-            return jsonify({"error": "Missing chapter_text or answer"}), 400
+            return jsonify({"error": "Missing 'chapter_text' or 'answer'"}), 400
 
         result = grade_answer(chapter_text, answer)
         return jsonify(result), 200
