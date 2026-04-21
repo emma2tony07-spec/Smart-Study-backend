@@ -25,7 +25,7 @@ CORS(app)
 GMAIL_ADDRESS  = os.environ.get("GMAIL_ADDRESS",  "")
 GMAIL_APP_PASS = os.environ.get("GMAIL_APP_PASS", "")
 FROM_NAME      = os.environ.get("FROM_NAME",      "StudyOS")
-APP_URL        = os.environ.get("APP_URL",         "https://your-app.onrender.com")
+APP_URL        = os.environ.get("APP_URL",         "")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 AI_MODEL       = os.environ.get("AI_MODEL",       "gemini-2.0-flash")
