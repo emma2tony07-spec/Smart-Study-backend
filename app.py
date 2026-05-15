@@ -45,7 +45,7 @@ GMAIL_APP_PASS        = os.environ.get("GMAIL_APP_PASS", "").replace(" ", "").st
 FROM_NAME             = "StudyOS"
 MASTER_OPENROUTER_KEY = os.environ.get("MASTER_OPENROUTER_KEY", "").strip()
 OPENROUTER_BASE_URL   = "https://openrouter.ai/api/v1"
-DAILY_FREE_LIMIT      = int(os.environ.get("DAILY_FREE_LIMIT", "20"))
+DAILY_FREE_LIMIT      = int(os.environ.get("DAILY_FREE_LIMIT", "200"))
 
 AVAILABLE_MODELS = [
     "poolside/laguna-xs.2:free",
