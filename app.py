@@ -31,7 +31,7 @@ app = Flask(__name__)
 ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:5500",
-    "https://aretistudyos.netlify.app/"
+    "https://aretistudyos.netlify.app/",
     "https://emma2tony07-spec.github.io/StudyOS/",  # UPDATE THIS
     "https://your-studyos-frontend.vercel.app",   # UPDATE THIS
 ]
